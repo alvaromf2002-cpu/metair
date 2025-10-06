@@ -9,7 +9,7 @@ from sqlalchemy import create_engine
 # Function that takes the path in which the database you want to work with is located
 
 def get_path():
-    path = "path"           # Write specific path
+    path = "initial_database_from_json.db"           # Write specific path
     return path
 
 
