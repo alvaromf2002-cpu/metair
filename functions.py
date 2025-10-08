@@ -1,7 +1,7 @@
 # LIBRARIES
 import pandas as pd
+import numpy as np
 from sqlalchemy import create_engine
-
 
 #----  DATABASE FUNCTIONS  ---------------------------------------------------------------------------------------------
 
@@ -41,4 +41,37 @@ def fromDFtoSQL(df, list_name, existence):
     df.to_sql(list_name, con=engine, if_exists='replace', index=False)      # Create the SQL from the DataFrame
     engine.dispose()                                                        # Close and release the Engine
 
+# Import and transform data
+
+def process_data(name):
+    # df_origin RAW data
+    # df0        Clasified data
+    # df1       Valid data
+    # df2       Treated data
+
+
+    df_origin = pd.read_json(name)
+
+    df0 = pd.DataFrame()
+
+    df0["hex"] = df_origin["aircraft"].apply(lambda x: x.get("hex"))
+    df0["lat"] = df_origin["aircraft"].apply(lambda x: x.get("lat"))
+    df0["lon"] = df_origin["aircraft"].apply(lambda x: x.get("lon"))
+    df0["alt_baro"] = df_origin["aircraft"].apply(lambda x: x.get("alt_baro"))
+    df0["gs"] = df_origin["aircraft"].apply(lambda x: x.get("gs"))
+    df0["tas"] = df_origin["aircraft"].apply(lambda x: x.get("tas"))
+    df0["track"] = df_origin["aircraft"].apply(lambda x: x.get("track"))
+    df0["mag_heading"] = df_origin["aircraft"].apply(lambda x: x.get("mag_heading"))
+    df0["true_heading"] = df_origin["aircraft"].apply(lambda x: x.get("true_heading"))
+
+    df1 = df0.dropna(subset=[col for col in df0.columns if col != "true_heading"])
+
+    df2 = df1[["hex", "lat", "lon", "alt_baro"]].copy()
+    df2["Wx"] = df1["gs"]*np.cos(np.radians(df1["track"])) - df1["tas"]*np.cos(np.radians(df1["true_heading"]))
+    df2["Wy"] = df1["gs"]*np.sin(np.radians(df1["track"])) - df1["tas"]*np.sin(np.radians(df1["true_heading"]))
+    df2["W"] =  ( df2["Wx"]**2 + df2["Wy"]**2 )**0.5
+    df2["Wind_to"] = (np.degrees(np.arctan2(df2["Wx"], df2["Wy"])) + 360) % 360
+    df2["Wind_from"] = (np.degrees(np.arctan2(df2["Wx"], df2["Wy"])) + 180) % 360
+
+    return df2, df0
 
