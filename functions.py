@@ -2,6 +2,7 @@
 import pandas as pd
 import numpy as np
 from sqlalchemy import create_engine
+from sklearn.cluster import DBSCAN
 
 #----  DATABASE FUNCTIONS  ---------------------------------------------------------------------------------------------
 
@@ -67,11 +68,72 @@ def process_data(name):
     df1 = df0.dropna(subset=[col for col in df0.columns if col != "true_heading"])
 
     df2 = df1[["hex", "lat", "lon", "alt_baro"]].copy()
-    df2["Wx"] = df1["gs"]*np.cos(np.radians(df1["track"])) - df1["tas"]*np.cos(np.radians(df1["true_heading"]))
-    df2["Wy"] = df1["gs"]*np.sin(np.radians(df1["track"])) - df1["tas"]*np.sin(np.radians(df1["true_heading"]))
+    df2["Wx"] = df1["gs"]*np.sin(np.radians(df1["track"])) - df1["tas"]*np.sin(np.radians(df1["true_heading"]))
+    df2["Wy"] = df1["gs"]*np.cos(np.radians(df1["track"])) - df1["tas"]*np.cos(np.radians(df1["true_heading"]))
     df2["W"] =  ( df2["Wx"]**2 + df2["Wy"]**2 )**0.5
     df2["Wind_to"] = (np.degrees(np.arctan2(df2["Wx"], df2["Wy"])) + 360) % 360
     df2["Wind_from"] = (np.degrees(np.arctan2(df2["Wx"], df2["Wy"])) + 180) % 360
 
     return df2, df0
+
+
+    # Filter Data 
+    # First outliers by log-normal
+    # Second cluster outliers 
+    # Tune Cutoff values
+def filter_data(df):
+    # df Input 
+    # df1 First filter
+    # df2 Second filter
+    
+    # First outliers by log-normal
+    # Sigma log-normal
+    sg1 = 2.5
+
+    log_data = np.log(df["W"])
+
+    mu, sigma = log_data.mean(), log_data.std()
+    upper = mu + sg1*sigma
+    high_thresh = np.exp(upper)
+
+    df1 = df[df["W"] <= high_thresh]
+
+    # Second cluster outliers 
+
+    # Improve geometrical distance (lon,lat != x,y)
+    # DBSCAN parameters
+    eps = .5      # radius to consider neighbors
+    min_samples = 3  # minimum points to be considered dense
+
+    db = DBSCAN(eps=eps, min_samples=min_samples)
+    df2 = df1.copy()
+    df2['cluster'] = db.fit_predict(df1[["lon", "lat"]])
+
+    df2 = df2[df2['cluster'] >= 0]
+    
+
+    # Sigma log-normal
+    sg2 = 1
+
+    df_aux = []
+    for cluster_id, group in df2.groupby("cluster"):
+        data = group["W"]
+        if len(data) < 5:  # skip tiny clusters
+            # keep small clusters as they are
+            df_aux.append(group)
+            continue
+        log_data = np.log(data)
+        mu, s = log_data.mean(), log_data.std()
+        low, high = np.exp(mu - sg2*s), np.exp(mu + sg2*s)
+        group_filtered = group[(group["W"] >= low) & (group["W"] <= high)]
+        df_aux.append(group_filtered)
+
+    df_clean = pd.concat(df_aux, ignore_index=True)
+
+
+    return df_clean, df1
+
+
+
+
 
