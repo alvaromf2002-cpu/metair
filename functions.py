@@ -112,20 +112,30 @@ def filter_data(df):
     df2 = df2[df2['cluster'] >= 0]
     
 
-    # Sigma log-normal
+    # Sigma normal
     sg2 = 1
 
     df_aux = []
     for cluster_id, group in df2.groupby("cluster"):
-        data = group["W"]
-        if len(data) < 5:  # skip tiny clusters
-            # keep small clusters as they are
-            df_aux.append(group)
-            continue
-        log_data = np.log(data)
-        mu, s = log_data.mean(), log_data.std()
-        low, high = np.exp(mu - sg2*s), np.exp(mu + sg2*s)
-        group_filtered = group[(group["W"] >= low) & (group["W"] <= high)]
+        W = group["W"]
+        Wx = group["Wx"]
+        Wy = group["Wy"]
+
+        # if len(W) < 5:  # skip tiny clusters
+        #     # keep small clusters as they are
+        #     df_aux.append(group)
+        #     continue
+        mu, s = W.mean(), W.std()
+        mux, sx = Wx.mean(), Wx.std()
+        muy, sy = Wy.mean(), Wy.std()
+
+        low, high = mu - sg2*s, mu + sg2*s
+        lowx, highx = mux - sg2*sx, mux + sg2*sx
+        lowy, highy = muy - sg2*sy, muy + sg2*sy
+
+        group_filtered = group[(group["W"] >= low) & (group["W"] <= high) &
+                                (group["Wx"] >= lowx) & (group["Wx"] <= highx) &
+                                  (group["Wy"] >= lowy) & (group["Wy"] <= highy)]
         df_aux.append(group_filtered)
 
     df_clean = pd.concat(df_aux, ignore_index=True)
@@ -134,6 +144,13 @@ def filter_data(df):
     return df_clean, df1
 
 
+
+def data_treatment(name):
+    
+    df2, df = process_data(name)
+    df4, df3 = filter_data(df2)
+
+    return df4
 
 
 
