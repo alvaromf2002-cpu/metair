@@ -111,37 +111,52 @@ def filter_data(df):
     min_samples = 3  # minimum points to be considered dense
 
     db = DBSCAN(eps=eps, min_samples=min_samples)
-    df2 = df1.copy()
-    df2['cluster'] = db.fit_predict(df1[["lon", "lat"]])
+    # df2 = df1.copy()
 
-    df2 = df2[df2['cluster'] >= 0]
+    df1l = df1[(df1["alt_baro"] < 10000)]
+    df1m = df1[(df1["alt_baro"] < 30000) & (df1["alt_baro"] >= 10000)]
+    df1h = df1[(df1["alt_baro"] >= 30000)]
+
+    df2l = df1l.copy()
+    df2m = df1l.copy()
+    df2h = df1h.copy()
+    df2l['cluster'] = db.fit_predict(df2l[["lon", "lat"]])
+    df2m['cluster'] = db.fit_predict(df2m[["lon", "lat"]])
+    df2h['cluster'] = db.fit_predict(df2h[["lon", "lat"]])
+
+    # df2['cluster'] = db.fit_predict(df1[["lon", "lat"]])
+
+    df2l = df2l[df2l['cluster'] >= 0]
+    df2m = df2m[df2m['cluster'] >= 0]
+    df2h = df2h[df2h['cluster'] >= 0]
     
 
     # Sigma normal
     sg2 = 1
 
     df_aux = []
-    for cluster_id, group in df2.groupby("cluster"):
-        W = group["W"]
-        Wx = group["Wx"]
-        Wy = group["Wy"]
+    for df_name, df in [("low", df2l), ("mid", df2m), ("high", df2h)]:
+        for cluster_id, group in df.groupby("cluster"):
+            W = group["W"]
+            Wx = group["Wx"]
+            Wy = group["Wy"]
 
-        # if len(W) < 5:  # skip tiny clusters
-        #     # keep small clusters as they are
-        #     df_aux.append(group)
-        #     continue
-        mu, s = W.mean(), W.std()
-        mux, sx = Wx.mean(), Wx.std()
-        muy, sy = Wy.mean(), Wy.std()
+            # if len(W) < 5:  # skip tiny clusters
+            #     # keep small clusters as they are
+            #     df_aux.append(group)
+            #     continue
+            mu, s = W.mean(), W.std()
+            mux, sx = Wx.mean(), Wx.std()
+            muy, sy = Wy.mean(), Wy.std()
 
-        low, high = mu - sg2*s, mu + sg2*s
-        lowx, highx = mux - sg2*sx, mux + sg2*sx
-        lowy, highy = muy - sg2*sy, muy + sg2*sy
+            low, high = mu - sg2*s, mu + sg2*s
+            lowx, highx = mux - sg2*sx, mux + sg2*sx
+            lowy, highy = muy - sg2*sy, muy + sg2*sy
 
-        group_filtered = group[(group["W"] >= low) & (group["W"] <= high) &
-                                (group["Wx"] >= lowx) & (group["Wx"] <= highx) &
-                                  (group["Wy"] >= lowy) & (group["Wy"] <= highy)]
-        df_aux.append(group_filtered)
+            group_filtered = group[(group["W"] >= low) & (group["W"] <= high) &
+                                    (group["Wx"] >= lowx) & (group["Wx"] <= highx) &
+                                    (group["Wy"] >= lowy) & (group["Wy"] <= highy)]
+            df_aux.append(group_filtered)
 
     df_clean = pd.concat(df_aux, ignore_index=True)
 
