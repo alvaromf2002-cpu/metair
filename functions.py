@@ -68,6 +68,11 @@ def process_data(name):
     df1 = df0.dropna(subset=[col for col in df0.columns if col != "true_heading"])
 
     df2 = df1[["hex", "lat", "lon", "alt_baro"]].copy()
+
+    df2["alt_baro"] = pd.to_numeric(df2["alt_baro"], errors="coerce")
+    df2 = df2.dropna(subset=["alt_baro"])
+    df2 = df2[df2["alt_baro"] > 0]
+
     df2["Wx"] = df1["gs"]*np.sin(np.radians(df1["track"])) - df1["tas"]*np.sin(np.radians(df1["true_heading"]))
     df2["Wy"] = df1["gs"]*np.cos(np.radians(df1["track"])) - df1["tas"]*np.cos(np.radians(df1["true_heading"]))
     df2["W"] =  ( df2["Wx"]**2 + df2["Wy"]**2 )**0.5
@@ -150,7 +155,7 @@ def data_treatment(name):
     df2, df = process_data(name)
     df4, df3 = filter_data(df2)
 
-    return df4
+    return df4, df
 
 
 
