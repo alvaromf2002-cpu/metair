@@ -1,7 +1,7 @@
 # MétAir
 
 This repository contains the deliverable of the **MétAir** project, developed as part of the **Data Engineering** module of the *Data & Decision Sciences Major* at **ISAE-SUPAERO**.  
-The project aims to design an **ETL (Extract, Transform, Load)** pipeline capable of extracting real-time flight data from the **OpenSky Network API**, processing it to estimate high-altitude wind conditions, and storing the results in a structured database.
+The project aims to design an **ETL (Extract, Transform, Load)** pipeline capable of extracting real-time flight data from the **ADS-B Exchange API**, processing it to estimate high-altitude wind conditions, and storing the results in a structured database.
 
 
 ## Repository Structure
