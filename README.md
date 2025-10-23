@@ -74,7 +74,6 @@ The script will process all JSON files in the `data/` directory, clean and trans
 
 - Static maps are available in the `images/` folder (`output.png`).
 - A temporal wind animation is provided as `wind_animation.gif`.
-- The graphical interface (`ui_app.py`) can be used to explore the processed data interactively.
 
 ---
 
