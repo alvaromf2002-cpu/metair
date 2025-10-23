@@ -4,5 +4,5 @@ pandas
 flask
 python-dateutil
 numpy
-sklearn
+scikit-learn
 sqlalchemy
