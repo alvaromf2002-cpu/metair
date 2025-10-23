@@ -19,7 +19,6 @@ metair/
 ├── initial_database_from_json.db     # SQLite database generated from processed data
 ├── json_load.ipynb                   # Notebook for exploratory analysis
 ├── main.py                           # Main script that runs the ETL pipeline
-├── ui_app.py                         # Graphical interface for data visualization
 ├── requirements.txt                  # Python dependencies
 └── README.md                         # This file
 ```
