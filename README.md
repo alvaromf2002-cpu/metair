@@ -65,7 +65,7 @@ pip install -r requirements.txt
 ### 3. Run the ETL pipeline
 
 ```bash
-python main.py
+python3 main.py --json data/000000Z.json
 ```
 
 The script will process all JSON files in the `data/` directory, clean and transform the data, and generate a SQLite database containing the results.
