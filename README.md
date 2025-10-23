@@ -30,7 +30,7 @@ metair/
 The **MétAir** pipeline follows a classic ETL structure:
 
 ### 1. Extraction  
-Reads hourly JSON files obtained from the OpenSky Network API. These files contain ADS-B data transmitted by aircraft, including position, velocity, altitude, and heading.
+Reads hourly JSON files obtained from the ADS-B Exchange API. These files contain ADS-B data transmitted by aircraft, including position, velocity, altitude, and heading.
 
 ### 2. Transformation  
 Cleans the data, computes wind components (\( W_x, W_y, W \)) based on true airspeed, ground speed, and heading, and applies filtering using log-normal models and spatial clustering (DBSCAN).
