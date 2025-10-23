@@ -3,3 +3,6 @@ sqlalchemy
 pandas
 flask
 python-dateutil
+numpy
+sklearn
+sqlalchemy
