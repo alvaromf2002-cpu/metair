@@ -1,5 +1,5 @@
 import argparse
-from etl_functions import run_pipeline
+from functions import *
 
 def main():
     parser = argparse.ArgumentParser(description="Run ETL pipeline on aircraft JSON data.")

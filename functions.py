@@ -1,8 +1,15 @@
 # LIBRARIES
 import pandas as pd
 import numpy as np
-from sqlalchemy import create_engine
+import json
+
 from sklearn.cluster import DBSCAN
+from tinydb import TinyDB
+
+from sqlalchemy import create_engine, Column, Integer, Float, String
+from sqlalchemy.orm import declarative_base, sessionmaker
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker
 
 #----  DATABASE FUNCTIONS  ---------------------------------------------------------------------------------------------
 
@@ -10,7 +17,7 @@ from sklearn.cluster import DBSCAN
 # Function that takes the path in which the database you want to work with is located
 
 def get_path():
-    path = "initial_database_from_json.db"           # Write specific path
+    path = "initial_database_from_json.db"                  # Write specific path
     return path
 
 
@@ -42,7 +49,9 @@ def fromDFtoSQL(df, list_name, existence):
     df.to_sql(list_name, con=engine, if_exists='replace', index=False)      # Create the SQL from the DataFrame
     engine.dispose()                                                        # Close and release the Engine
 
-# Import and transform data
+
+
+# Function that imports and transforms data
 
 def process_data(name):
     # df_origin RAW data
@@ -82,11 +91,10 @@ def process_data(name):
     return df2, df0
 
 
-    # Filter Data 
-    # First outliers by log-normal
-    # Second cluster outliers 
-    # Tune Cutoff values
+# Function that filters data by removing log-normal and cluster-based outliers with tuned cutoff values
+
 def filter_data(df):
+
     # df Input 
     # df1 First filter
     # df2 Second filter
@@ -164,6 +172,7 @@ def filter_data(df):
     return df_clean, df1
 
 
+# Processes and filters data for a given name
 
 def data_treatment(name):
     
@@ -173,4 +182,99 @@ def data_treatment(name):
     return df4, df
 
 
+#----  ETL FUNCTIONS  ---------------------------------------------------------------------------------------------
 
+# SQLAlchemy base
+Base = declarative_base()
+
+# AircraftMetrics table definition
+class AircraftMetrics(Base):
+    __tablename__ = 'aircraft_metrics'
+    id = Column(Integer, primary_key=True, autoincrement=True)
+    name = Column(String, nullable=False) 
+    timestamp_utc = Column(String, nullable=False)
+    altitude_m = Column(Float, nullable=False)
+    gs_kmh = Column(Float, nullable=False)
+    tas_kmh = Column(Float, nullable=False)
+    heading_diff_deg = Column(Float, nullable=False)
+
+# Load JSON file
+def load_json(path):
+    """Load a JSON file and return its content."""
+    with open(path, 'r') as f:
+        return json.load(f)
+
+# Write raw records to NoSQL TinyDB
+def write_nosql(records, db_path="nosql_raw.json"):
+    """Write records to a TinyDB JSON database."""
+    db = TinyDB(db_path)
+    db.truncate()
+    db.insert_multiple(records)
+
+# Transform raw records into structured format
+
+def transform_records(records):
+    """Transform raw JSON records into structured dictionary for SQL/NoSQL."""
+    total = len(records)
+    used = 0
+    transformed = []
+    
+    for r in records:
+        try:
+            # Extract raw fields
+            name = r.get("hex")
+            timestamp_utc = r.get("now")
+            altitude_m = r.get("alt_baro")
+            gs_kmh = r.get("gs")
+            tas_kmh = r.get("tas")
+            mag_heading = r.get("mag_heading")
+            true_heading = r.get("true_heading")
+
+            # Skip incomplete records
+            if None in [name, timestamp_utc, altitude_m, gs_kmh, tas_kmh, mag_heading, true_heading]:
+                continue
+
+            # Calculate heading difference
+            heading_diff_deg = true_heading - mag_heading
+
+            # Append transformed record
+            transformed.append({
+                "name": name,
+                "timestamp_utc": timestamp_utc,
+                "altitude_m": altitude_m,
+                "gs_kmh": gs_kmh,
+                "tas_kmh": tas_kmh,
+                "heading_diff_deg": heading_diff_deg
+            })
+            used += 1
+        except Exception:
+            continue
+
+    return transformed, total, used
+
+# Write transformed records to SQL database
+
+def write_sql(transformed_records, db_path="etl_output.db"):
+    """Write transformed records to an SQLite database using SQLAlchemy."""
+    engine = create_engine(f"sqlite:///{db_path}")
+    Base.metadata.create_all(engine)
+    Session = sessionmaker(bind=engine)
+    session = Session()
+    session.bulk_insert_mappings(AircraftMetrics, transformed_records)
+    session.commit()
+    session.close()
+
+# Full ETL pipeline
+
+def run_pipeline(path_json):
+    """Run the full ETL pipeline: load JSON, write NoSQL, transform, and write SQL."""
+    records = load_json(path_json)
+    write_nosql(records)
+    transformed, total, used = transform_records(records)
+    write_sql(transformed)
+    return {
+        "total": total,
+        "used": used,
+        "db_path": "etl_output.db",
+        "nosql_path": "nosql_raw.json"
+    }
