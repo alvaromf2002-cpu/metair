@@ -79,10 +79,10 @@ The script will process the JSON file selected in the `data/` directory, cleans 
 
 ## Results
 
-- Estimation of 3D wind vectors at different altitudes based on ADS-B flight data.  
-- Geographic visualizations of flight paths, color-coded by time of day.  
-- Histograms showing wind speed distributions after filtering.  
-- A structured SQLite database containing all processed and validated flight data.
+- Estimation of 3D wind vectors at different altitudes based on ADS-B flight data. (report)
+- Geographic visualizations of flight paths, color-coded by time of day. (output.png)
+- Histograms showing wind speed distributions after filtering. (miscellaneous.ipynb)
+- Two structured SQLite databases containing all raw and processed flight data. (Raw_SQL.db and Wind_SQL.db)
 
 
 
