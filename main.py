@@ -1,17 +1,26 @@
-import argparse
 from functions import *
+import pandas as pd
+import numpy as np
+import json
+import os
+from sklearn.cluster import DBSCAN
+from tinydb import TinyDB
+from sqlalchemy import create_engine
 
-def main():
-    parser = argparse.ArgumentParser(description="Run ETL pipeline on aircraft JSON data.")
-    parser.add_argument("--json", type=str, default="input.json", help="Path to input JSON file")
-    args = parser.parse_args()
+# Select the aircraft data file:
 
-    summary = run_pipeline(args.json)
-    print("ETL Pipeline completed.")
-    print(f"Total records: {summary['total']}")
-    print(f"Used records: {summary['used']}")
-    print(f"Percentage used: {summary['used']/summary['total']*100 if summary['total'] else 0:.2f}%")
-    print(f"SQL DB: {summary['db_path']}, NoSQL DB: {summary['nosql_path']}")
+# 000000Z.json
+#     ...
+# 230000Z.json
 
-if __name__ == "__main__":
-    main()
+filepath = "data/000000Z.json"
+print("filepath exists:", os.path.exists(filepath))
+
+# pipeline (Extract, Transform, Load)
+try:
+    df4, df = data_treatment(filepath)
+except Exception as e:
+    print("Error in data_treatment:", e)
+
+fromDFtoSQL(df, "Raw_SQL", existence=0)             # existence = 0 as database does not exist yet
+fromDFtoSQL(df4, "Wind_SQL", existence=0)            # existence = 0 as database does not exist yet

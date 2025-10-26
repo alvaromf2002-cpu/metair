@@ -12,12 +12,13 @@ metair/
 ├── __pycache__/                      # Compiled Python cache files
 ├── data/                             # Raw JSON flight data from OpenSky
 ├── images/                           # Generated visuals (maps, plots, animations)
-│   ├── output.png
-│   └── wind_animation.gif
+│   ├── output.png                    # Image containing sensor coverage representation
+│   └── wind_animation.gif            # Wind vectors throughout 01/10/2025
 │
 ├── functions.py                      # Core ETL functions (extract, transform, load)
-├── initial_database_from_json.db     # SQLite database generated from processed data
-├── json_load.ipynb                   # Notebook for exploratory analysis
+├── Raw_SQL.db                        # SQLite database generated from extracted data
+├── Wind_SQL.db                       # SQLite database generated from processed data
+├── miscellaneous.ipynb               # Notebook for exploratory analysis
 ├── main.py                           # Main script that runs the ETL pipeline
 ├── requirements.txt                  # Python dependencies
 └── README.md                         # This file
@@ -67,7 +68,7 @@ pip install -r requirements.txt
 python3 main.py 
 ```
 
-The script will process all JSON files in the `data/` directory, clean and transform the data, and generate a SQLite database containing the results.
+The script will process the JSON file selected in the `data/` directory, cleans and transforms the data, and generates two SQLite database containing the results (raw and processed) as described in the pipeline from the report.
 
 ### 4. Visualize the results
 

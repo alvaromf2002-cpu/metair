@@ -2,32 +2,26 @@
 import pandas as pd
 import numpy as np
 import json
-
+import os
 from sklearn.cluster import DBSCAN
 from tinydb import TinyDB
-
-from sqlalchemy import create_engine, Column, Integer, Float, String
-from sqlalchemy.orm import declarative_base, sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
-
-#----  DATABASE FUNCTIONS  ---------------------------------------------------------------------------------------------
+from sqlalchemy import create_engine
 
 
 # Function that takes the path in which the database you want to work with is located
 
-def get_path():
-    path = "initial_database_from_json.db"                  # Write specific path
+def get_path(db_name):
+    path = path = f"{db_name}.db"                 # Write specific path
     return path
 
 
 # Function that reads the file where the data is saved and create a dataframe
 
-def fromSQLtoDF(list_name):
+def fromSQLtoDF(db_name):
 
-    route = get_path()                                      # Take the database route
+    route = get_path(db_name)                                      # Take the database route
     engine = create_engine(f'sqlite:///{route}')            # Create the Engine
-    query = "SELECT * FROM '{}' ".format(list_name)         # Set the query
+    query = "SELECT * FROM '{}' ".format(db_name)         # Set the query
     df = pd.read_sql_query(query, engine)                   # Create the DataFrame from the SQL
     engine.dispose()                                        # Close and release the Engine
 
@@ -36,7 +30,7 @@ def fromSQLtoDF(list_name):
 
 # Function that creates a Database from the dataframe introduced
 
-def fromDFtoSQL(df, list_name, existence):
+def fromDFtoSQL(df, db_name, existence):
 
     # Give the option to choose whether you want to add to an existing list or replace it
     if existence == 0:
@@ -44,10 +38,11 @@ def fromDFtoSQL(df, list_name, existence):
     elif existence == 1:
         if_exists = 'append'
 
-    route = get_path()                                                      # Take the database route
-    engine = create_engine(f'sqlite:///{route}')                            # Create the Engine
-    df.to_sql(list_name, con=engine, if_exists='replace', index=False)      # Create the SQL from the DataFrame
-    engine.dispose()                                                        # Close and release the Engine
+    route = get_path(db_name)                                                       # Take the database route
+    engine = create_engine(f'sqlite:///{route}')                                    # Create the Engine
+    df.to_sql(db_name, con=engine, if_exists=if_exists, index=False)                # Create the SQL from the DataFrame
+    engine.dispose()
+    print(f"Data saved in: {os.path.abspath(route)} (case: {if_exists})")                                                      # Close and release the Engine
 
 
 
@@ -59,8 +54,11 @@ def process_data(name):
     # df1       Valid data
     # df2       Treated data
 
-
+    print("reading JSON:", name)
+    
     df_origin = pd.read_json(name)
+
+    print("JSON loaded, size:", df_origin.shape)
 
     df0 = pd.DataFrame()
 
@@ -177,104 +175,11 @@ def filter_data(df):
 def data_treatment(name):
     
     df2, df = process_data(name)
+    print("Data processed")
+    print(df.head())
     df4, df3 = filter_data(df2)
+    print("Data filtered")
+    print(df4.head())
 
     return df4, df
 
-
-#----  ETL FUNCTIONS  ---------------------------------------------------------------------------------------------
-
-# SQLAlchemy base
-Base = declarative_base()
-
-# AircraftMetrics table definition
-class AircraftMetrics(Base):
-    __tablename__ = 'aircraft_metrics'
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    name = Column(String, nullable=False) 
-    timestamp_utc = Column(String, nullable=False)
-    altitude_m = Column(Float, nullable=False)
-    gs_kmh = Column(Float, nullable=False)
-    tas_kmh = Column(Float, nullable=False)
-    heading_diff_deg = Column(Float, nullable=False)
-
-# Load JSON file
-def load_json(path):
-    """Load a JSON file and return its content."""
-    with open(path, 'r') as f:
-        return json.load(f)
-
-# Write raw records to NoSQL TinyDB
-def write_nosql(records, db_path="nosql_raw.json"):
-    """Write records to a TinyDB JSON database."""
-    db = TinyDB(db_path)
-    db.truncate()
-    db.insert_multiple(records)
-
-# Transform raw records into structured format
-
-def transform_records(records):
-    """Transform raw JSON records into structured dictionary for SQL/NoSQL."""
-    total = len(records)
-    used = 0
-    transformed = []
-    
-    for r in records:
-        try:
-            # Extract raw fields
-            name = r.get("hex")
-            timestamp_utc = r.get("now")
-            altitude_m = r.get("alt_baro")
-            gs_kmh = r.get("gs")
-            tas_kmh = r.get("tas")
-            mag_heading = r.get("mag_heading")
-            true_heading = r.get("true_heading")
-
-            # Skip incomplete records
-            if None in [name, timestamp_utc, altitude_m, gs_kmh, tas_kmh, mag_heading, true_heading]:
-                continue
-
-            # Calculate heading difference
-            heading_diff_deg = true_heading - mag_heading
-
-            # Append transformed record
-            transformed.append({
-                "name": name,
-                "timestamp_utc": timestamp_utc,
-                "altitude_m": altitude_m,
-                "gs_kmh": gs_kmh,
-                "tas_kmh": tas_kmh,
-                "heading_diff_deg": heading_diff_deg
-            })
-            used += 1
-        except Exception:
-            continue
-
-    return transformed, total, used
-
-# Write transformed records to SQL database
-
-def write_sql(transformed_records, db_path="etl_output.db"):
-    """Write transformed records to an SQLite database using SQLAlchemy."""
-    engine = create_engine(f"sqlite:///{db_path}")
-    Base.metadata.create_all(engine)
-    Session = sessionmaker(bind=engine)
-    session = Session()
-    session.bulk_insert_mappings(AircraftMetrics, transformed_records)
-    session.commit()
-    session.close()
-
-# Full ETL pipeline
-
-def run_pipeline(path_json):
-    """Run the full ETL pipeline: load JSON, write NoSQL, transform, and write SQL."""
-    records = load_json(path_json)
-    write_nosql(records)
-    transformed, total, used = transform_records(records)
-    write_sql(transformed)
-    return {
-        "total": total,
-        "used": used,
-        "db_path": "etl_output.db",
-        "nosql_path": "nosql_raw.json"
-    }

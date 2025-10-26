@@ -5,4 +5,4 @@ flask
 python-dateutil
 numpy
 scikit-learn
-sqlalchemy
+
