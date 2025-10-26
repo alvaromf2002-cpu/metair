@@ -13,7 +13,7 @@ from sqlalchemy import create_engine
 #     ...
 # 230000Z.json
 
-filepath = "data/000000Z.json"
+filepath = "data/120000Z.json"
 print("filepath exists:", os.path.exists(filepath))
 
 # pipeline (Extract, Transform, Load)
